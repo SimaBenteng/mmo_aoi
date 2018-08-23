@@ -1,0 +1,25 @@
+{
+  "name": "mmo_aoi",
+  "version": "1.0.0",
+  "description": "基于es6的MMO AOI系统",
+  "main": "AOI.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SimaBenteng/aoi.git"
+  },
+  "keywords": [
+    "aoi",
+    "node",
+    "js",
+    "mmo"
+  ],
+  "author": "simabenteng",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/SimaBenteng/aoi/issues"
+  },
+  "homepage": "https://github.com/SimaBenteng/aoi#readme"
+}
