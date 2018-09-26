@@ -9,20 +9,15 @@ class AOI
 {
 	constructor(width, height, updateFPS)
 	{
-		this.quadTreeWatchers = new QuadTree(
-			{
-				x      : 0,
-				y      : 0,
-				width  : width,
-				height : height
-			}, 8, 5);
-		this.quadTreeGameObjects = new QuadTree(
-			{
-				x      : 0,
-				y      : 0,
-				width  : width,
-				height : height
-			}, 8, 5);
+		const mapSize = {
+			x      : 0,
+			y      : 0,
+			width  : width,
+			height : height
+		};
+		this.quadTreeWatchers = QuadTree.init(mapSize);
+		this.quadTreeGameObjects = QuadTree.init(mapSize);
+		
 		this.watchers = new GameObjectPool();
 		this.gameObjects = new GameObjectPool();
 		this.updateFPS = updateFPS;
@@ -103,7 +98,6 @@ class AOI
 		}
 	}
 	
-	// 应该用消息获取
 	onGameObjectPropertyChanged(gameObject)
 	{
 		const visionRadius = gameObject[this.visionRadiusKey];
@@ -191,21 +185,18 @@ class AOI
 			{
 				const rect = this.constructor.Rect(position.x, position.y, visionRadius);
 				rect.objectId = watcher.gId;
-				const candidates = this.quadTreeGameObjects.retrieve(rect);
-				for (let i = 0; i < candidates.length; i ++)
-				{
-					const candidate = candidates[i];
+				this.quadTreeGameObjects.retrieve(rect, (candidate) => {
 					const couldBeWatch = this.constructor.CouldBeWatch(position.x,
 					                                                   position.y,
 					                                                   visionRadius,
 					                                                   candidate.x,
 					                                                   candidate.y,
-						candidate.width / 2);
+					                                                   candidate.width / 2);
 					if (couldBeWatch)
 					{
 						result.push(candidate.objectId);
 					}
-				}
+				});
 			}
 			return result;
 		}
@@ -227,11 +218,9 @@ class AOI
 			collisionRadius = collisionRadius ? collisionRadius : 0;
 			const rect = this.constructor.Rect(position.x, position.y, collisionRadius);
 			rect.objectId = gameObject.gId;
-			const candidates = this.quadTreeWatchers.retrieve(rect);
 			const result = [];
-			for (let i = 0; i < candidates.length; i ++)
+			this.quadTreeWatchers.retrieve(rect, (candidate) =>
 			{
-				const candidate = candidates[i];
 				if (this.constructor.CouldBeWatch(candidate.x,
 				                                  candidate.y,
 				                                  candidate.width / 2,
@@ -241,7 +230,7 @@ class AOI
 				{
 					result.push(candidate.objectId);
 				}
-			}
+			});
 			return result;
 		}
 	}
