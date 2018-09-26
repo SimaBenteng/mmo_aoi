@@ -1,240 +1,289 @@
 /*
- * Javascript QuadTree
- * @version 1.1.1
- * @licence MIT
- * @author Timo Hausmann
- * https://github.com/timohausmann/quadtree-js/
+ * QuadTree Implementation in JavaScript
+ * @author: silflow <https://github.com/silflow>
+ *
+ * Usage:
+ * To create a new empty Quadtree, do this:
+ * var tree = QUAD.init(args)
+ *
+ * args = {
+ *    // mandatory fields
+ *    x : x coordinate
+ *    y : y coordinate
+ *    w : width
+ *    h : height
+ *
+ *    // optional fields
+ *    maxChildren : max children per node
+ *    maxDepth : max depth of the tree
+ *}
+ *
+ * API:
+ * tree.insert() accepts arrays or single items
+ * every item must have a .x, .y, .w, and .h property. if they don't, the tree will break.
+ *
+ * tree.retrieve(selector, callback) calls the callback for all objects that are in
+ * the same region or overlapping.
+ *
+ * tree.clear() removes all items from the quadtree.
  */
- 
-/*
- Copyright © 2012 Timo Hausmann
 
-Permission is hereby granted, free of charge, to any person obtaining
-a copy of this software and associated documentation files (the
-"Software"), to deal in the Software without restriction, including
-without limitation the rights to use, copy, modify, merge, publish,
-distribute, sublicense, and/or sell copies of the Software, and to
-permit persons to whom the Software is furnished to do so, subject to
-the following conditions:
-
-The above copyright notice and this permission notice shall be
-included in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-NONINFRINGEMENthis. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
-LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
-OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
-WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-*/
-'use strict';
-
-class QuadTree
+const QUAD = {}; // global var for the quadtree
+module.exports = QUAD;
+QUAD.init = function(args)
 {
-	/**
-	 * QuadTree Constructor
-	 * @param {Object} bounds	 bounds of the node, object with x, y, width, height
-	 * @param {Number} maxObjects (optional) max objects a node can hold before splitting into 4 subnodes (default: 10)
-	 * @param {Number} maxLevels (optional) total max levels inside root QuadTree (default: 4)
-	 * @param {Number} level (optional) deepth level, required for subnodes
-	 */
-	constructor(bounds, maxObjects, maxLevels, level)
-	{
-		this.maxObjects	= maxObjects || 10;
-		this.maxLevels		= maxLevels || 4;
-		
-		this.level 		= level || 0;
-		this.bounds 		= bounds;
-		
-		this.objects 		= [];
-		this.nodes 		= [];
-	}
+	
+	const TOP_LEFT = 0;
+	const TOP_RIGHT = 1;
+	const BOTTOM_LEFT = 2;
+	const BOTTOM_RIGHT = 3;
+	const PARENT = 4;
+	
+	// assign default values
+	args.maxChildren = args.maxChildren || 2;
+	args.maxDepth = args.maxDepth || 4;
 	
 	/**
-	 * Split the node into 4 subnodes
+	 * Node creator. You should never create a node manually. the algorithm takes
+	 * care of that for you.
 	 */
-	split()
+	function node(x, y, w, h, depth, maxChildren, maxDepth)
 	{
-		const nextLevel = this.level + 1,
-			subWidth	= Math.round(this.bounds.width / 2),
-			subHeight 	= Math.round(this.bounds.height / 2),
-			x 		= Math.round(this.bounds.x),
-			y 		= Math.round(this.bounds.y);
 		
-		// top right node
-		this.nodes[0] = new QuadTree({
-			                             x     	: x + subWidth,
-			                             y     	: y,
-			                             width 	: subWidth,
-			                             height	: subHeight
-		                             }, this.maxObjects, this.maxLevels, nextLevel);
+		let items = []; // holds all items
+		const nodes = []; // holds all child nodes
 		
-		// top left node
-		this.nodes[1] = new QuadTree({
-			                             x     	: x,
-			                             y     	: y,
-			                             width 	: subWidth,
-			                             height	: subHeight
-		                             }, this.maxObjects, this.maxLevels, nextLevel);
-		
-		// bottom left node
-		this.nodes[2] = new QuadTree({
-			                             x     	: x,
-			                             y     	: y + subHeight,
-			                             width 	: subWidth,
-			                             height	: subHeight
-		                             }, this.maxObjects, this.maxLevels, nextLevel);
-		
-		// bottom right node
-		this.nodes[3] = new QuadTree({
-			                             x     	: x + subWidth,
-			                             y     	: y + subHeight,
-			                             width 	: subWidth,
-			                             height	: subHeight
-		                             }, this.maxObjects, this.maxLevels, nextLevel);
-	}
-	
-	/**
-	 * Determine which node the object belongs to
-	 * @param {Object} pRect	bounds of the area to be checked, with x, y, width, height
-	 * @return {Number} index of the subnode (0-3), or -1 if pRect cannot completely fit within a subnode and is part of the parent node
-	 */
-	getIndex(pRect)
-	{
-		let 	index = -1;
-		const verticalMidpoint 	= this.bounds.x + (this.bounds.width / 2),
-			horizontalMidpoint 	= this.bounds.y + (this.bounds.height / 2),
-			// pRect can completely fit within the top quadrants
-			topQuadrant = (pRect.y < horizontalMidpoint && pRect.y + pRect.height < horizontalMidpoint),
-			// pRect can completely fit within the bottom quadrants
-			bottomQuadrant = (pRect.y > horizontalMidpoint);
-		// pRect can completely fit within the left quadrants
-		if (pRect.x < verticalMidpoint && pRect.x + pRect.width < verticalMidpoint)
-		{
-			if (topQuadrant)
-			{
-				index = 1;
-			}
-			else if (bottomQuadrant)
-			{
-				index = 2;
-			}
-			// pRect can completely fit within the right quadrants
-		}
-		else if (pRect.x > verticalMidpoint)
-		{
-			if (topQuadrant)
-			{
-				index = 0;
-			}
-			else if (bottomQuadrant)
-			{
-				index = 3;
-			}
-		}
-		return index;
-	}
-	
-	/**
-	 * Insert the object into the node. If the node
-	 * exceeds the capacity, it will split and add all
-	 * objects to their corresponding subnodes.
-	 * @param {Object} pRect bounds of the object to be added, with x, y, width, height
-	 */
-	insert(pRect)
-	{
-		let 	i = 0,
-			index;
-		
-		// if we have subnodes ...
-		if (typeof this.nodes[0] !== 'undefined')
-		{
-			index = this.getIndex(pRect);
+		// returns a fresh node object
+		return {
 			
-			if (index !== -1)
-			{
-				this.nodes[index].insert(pRect);
-				return;
-			}
-		}
-		
-		this.objects.push(pRect);
-		
-		if (this.objects.length > this.maxObjects && this.level < this.maxLevels)
-		{
+			x     : x, // top left point
+			y     : y, // top right point
+			w     : w, // width
+			h     : h, // height
+			depth : depth, // depth level of the node
 			
-			// split if we don't already have subnodes
-			if (typeof this.nodes[0] === 'undefined')
+			/**
+			 * iterates all items that match the selector and invokes the supplied callback on them.
+			 */
+			retrieve : function(item, callback, instance)
 			{
-				this.split();
-			}
-			
-			// add all objects to there corresponding subnodes
-			while (i < this.objects.length)
-			{
-				
-				index = this.getIndex(this.objects[i]);
-				
-				if (index !== -1)
+				for (let i = 0; i < items.length; ++i)
 				{
-					this.nodes[index].insert(this.objects.splice(i, 1)[0]);
+					(instance) ? callback.call(instance, items[i]) : callback(items[i]);
+				}
+				// check if node has subnodes
+				if (nodes.length)
+				{
+					// call retrieve on all matching subnodes
+					this.findOverlappingNodes(item, function(dir)
+					{
+						nodes[dir].retrieve(item, callback, instance);
+					});
+				}
+			},
+			
+			/**
+			 * Adds a new Item to the node.
+			 *
+			 * If the node already has subnodes, the item gets pushed down one level.
+			 * If the item does not fit into the subnodes, it gets saved in the
+			 * "children"-array.
+			 *
+			 * If the maxChildren limit is exceeded after inserting the item,
+			 * the node gets divided and all items inside the "children"-array get
+			 * pushed down to the new subnodes.
+			 */
+			insert : function(item)
+			{
+				
+				let i;
+				
+				if (nodes.length)
+				{
+					// get the node in which the item fits best
+					i = this.findInsertNode(item);
+					if (i === PARENT)
+					{
+						// if the item does not fit, push it into the
+						// children array
+						items.push(item);
+					}
+					else
+					{
+						nodes[i].insert(item);
+					}
 				}
 				else
 				{
-					i = i + 1;
+					items.push(item);
+					// divide the node if maxChildren is exceeded and maxDepth is not reached
+					if (items.length > maxChildren && this.depth < maxDepth)
+					{
+						this.divide();
+					}
 				}
+			},
+			
+			/**
+			 * Find a node the item should be inserted in.
+			 */
+			findInsertNode : function(item)
+			{
+				// left
+				if (item.x + item.w < x + (w / 2))
+				{
+					if (item.y + item.h < y + (h / 2))
+					{
+						return TOP_LEFT;
+					}
+					if (item.y >= y + (h / 2))
+					{
+						return BOTTOM_LEFT;
+					}
+					return PARENT;
+				}
+				
+				// right
+				if (item.x >= x + (w / 2))
+				{
+					if (item.y + item.h < y + (h / 2))
+					{
+						return TOP_RIGHT;
+					}
+					if (item.y >= y + (h / 2))
+					{
+						return BOTTOM_RIGHT;
+					}
+					return PARENT;
+				}
+				
+				return PARENT;
+			},
+			
+			/**
+			 * Finds the regions the item overlaps with. See constants defined
+			 * above. The callback is called for every region the item overlaps.
+			 */
+			findOverlappingNodes : function(item, callback)
+			{
+				// left
+				if (item.x < x + (w / 2))
+				{
+					if (item.y < y + (h / 2))
+					{
+						callback(TOP_LEFT);
+					}
+					if (item.y + item.h >= y + h / 2)
+					{
+						callback(BOTTOM_LEFT);
+					}
+				}
+				// right
+				if (item.x + item.w >= x + (w / 2))
+				{
+					if (item.y < y + (h / 2))
+					{
+						callback(TOP_RIGHT);
+					}
+					if (item.y + item.h >= y + h / 2)
+					{
+						callback(BOTTOM_RIGHT);
+					}
+				}
+			},
+			
+			/**
+			 * Divides the current node into four subnodes and adds them
+			 * to the nodes array of the current node. Then reinserts all
+			 * children.
+			 */
+			divide : function()
+			{
+				let i;
+				const childrenDepth = this.depth + 1;
+				// set dimensions of the new nodes
+				const width = (w / 2);
+				const height = (h / 2);
+				// create top left node
+				nodes.push(node(this.x, this.y, width, height, childrenDepth, maxChildren, maxDepth));
+				// create top right node
+				nodes.push(node(this.x + width, this.y, width, height, childrenDepth, maxChildren, maxDepth));
+				// create bottom left node
+				nodes.push(node(this.x, this.y + height, width, height, childrenDepth, maxChildren, maxDepth));
+				// create bottom right node
+				nodes.push(node(this.x + width, this.y + height, width, height, childrenDepth, maxChildren, maxDepth));
+				
+				const oldChildren = items;
+				items = [];
+				for (i = 0; i < oldChildren.length; i++)
+				{
+					this.insert(oldChildren[i]);
+				}
+			},
+			
+			/**
+			 * Clears the node and all its subnodes.
+			 */
+			clear : function()
+			{
+				let i;
+				for (i = 0; i < nodes.length; i++)
+				{
+					nodes[i].clear();
+				}
+				items.length = 0;
+				nodes.length = 0;
+			},
+			
+			/*
+             * convenience method: is not used in the core algorithm.
+             * ---------------------------------------------------------
+             * returns this nodes subnodes. this is usful if we want to do stuff
+             * with the nodes, i.e. accessing the bounds of the nodes to draw them
+             * on a canvas for debugging etc...
+             */
+			getNodes : function()
+			{
+				return nodes.length ? nodes : false;
 			}
-		}
+		};
 	}
 	
-	/**
-	 * Return all objects that could collide with the given object
-	 * @param {Object} pRect bounds of the object to be checked, with x, y, width, height
-	 * @Return {Array} array with all detected objects
-	 */
-	retrieve(pRect)
-	{
-		const index = this.getIndex(pRect);
-		let returnObjects = this.objects;
+	return {
 		
-		// if we have subnodes ...
-		if (typeof this.nodes[0] !== 'undefined')
+		root : (function()
+		{
+			return node(args.x, args.y, args.w, args.h, 0, args.maxChildren, args.maxDepth);
+		}()),
+		
+		insert : function(item)
 		{
 			
-			// if pRect fits into a subnode ..
-			if (index !== -1)
+			let len, i;
+			
+			if (item instanceof Array)
 			{
-				returnObjects = returnObjects.concat(this.nodes[index].retrieve(pRect));
+				len = item.length;
+				for (i = 0; i < len; i++)
+				{
+					this.root.insert(item[i]);
+				}
 				
-				// if pRect does not fit into a subnode, check it against all subnodes
 			}
 			else
 			{
-				for (let i = 0; i < this.nodes.length; i = i + 1)
-				{
-					returnObjects = returnObjects.concat(this.nodes[i].retrieve(pRect));
-				}
+				this.root.insert(item);
 			}
-		}
-		return returnObjects;
-	}
-	
-	/**
-	 * Clear the quadtree
-	 */
-	clear()
-	{
-		this.objects = [];
+		},
 		
-		for (let i = 0; i < this.nodes.length; i = i + 1)
+		retrieve : function(selector, callback, instance)
 		{
-			if (typeof this.nodes[i] !== 'undefined')
-			{
-				this.nodes[i].clear();
-			}
+			return this.root.retrieve(selector, callback, instance);
+		},
+		
+		clear : function()
+		{
+			this.root.clear();
 		}
-		this.nodes = [];
-	}
-}
-module.exports = QuadTree;
+	};
+};
