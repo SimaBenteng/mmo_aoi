@@ -201,6 +201,21 @@ class AOI
 			return result;
 		}
 	}
+
+	getGameObjectsIdInCircle(center, radius)
+	{
+	    const result = [];
+        const rect = this.constructor.Rect(center.x, center.y, radius);
+        this.quadTreeGameObjects.retrieve(rect, (candidate) =>
+		{
+            const dis = this.Dis(center.x, center.y, candidate.x, candidate.y);
+            if (dis < radius)
+            {
+                result.push(candidate.objectId);
+            }
+		});
+        return result;
+	}
 	
 	getWatchers(gameObject)
 	{
