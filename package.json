@@ -1,6 +1,6 @@
 {
   "name": "mmo_aoi",
-  "version": "1.0.3.1",
+  "version": "1.0.4",
   "description": "基于es6的MMO AOI系统",
   "main": "AOI.js",
   "scripts": {
