@@ -17,7 +17,7 @@ class AOI
 		};
 		this.quadTreeWatchers = QuadTree.init(mapSize);
 		this.quadTreeGameObjects = QuadTree.init(mapSize);
-		
+
 		this.watchers = new GameObjectPool();
 		this.gameObjects = new GameObjectPool();
 		this.updateFPS = updateFPS;
@@ -25,7 +25,7 @@ class AOI
 		this.visionRadiusKey = 'visionRadius';
 		this.collisionRadiusKey = 'collisionRadius';
 	}
-	
+
 	static CreateAOI(width, height, visionRadiusKey, collisionRadiusKey)
 	{
 		const aoi = new AOI(width, height, 10);
@@ -39,7 +39,7 @@ class AOI
 		}
 		return aoi;
 	}
-	
+
 	static Rect(x, y, radius)
 	{
 		let r = radius;
@@ -53,19 +53,19 @@ class AOI
 			height : diameter
 		};
 	}
-	
+
 	static Dis(x1, y1, x2, y2)
 	{
 		return Math.sqrt(Math.pow(x1 - x2, 2) + Math.pow(y1 - y2, 2));
 	}
-	
+
 	static CouldBeWatch(watcherX, watcherY, visionRadius, objectX, objectY, collisionRadius)
 	{
 		const dis = this.Dis(watcherX, watcherY, objectX, objectY);
 		const d = visionRadius + collisionRadius;
 		return dis < d;
 	}
-	
+
 	setGameObject(gameObject)
 	{
 		const visionRadius = gameObject[this.visionRadiusKey];
@@ -83,7 +83,7 @@ class AOI
 			this.dataChangedUpdate = true;
 		}
 	}
-	
+
 	removeGameObject(gameObject)
 	{
 		if (this.watchers.removeGameObject(gameObject))
@@ -97,7 +97,7 @@ class AOI
 			this.dataChangedUpdate = true;
 		}
 	}
-	
+
 	onGameObjectPropertyChanged(gameObject)
 	{
 		const visionRadius = gameObject[this.visionRadiusKey];
@@ -122,7 +122,7 @@ class AOI
 		this.dataChangedGameObject = true;
 		this.dataChangedUpdate = true;
 	}
-	
+
 	setWatchersQuadTree()
 	{
 		this.watchers.forEachGameObject(watcher =>
@@ -142,7 +142,7 @@ class AOI
 			}
 		});
 	}
-	
+
 	setGameObjectQuadTree()
 	{
 		this.gameObjects.forEachGameObject(gameObject =>
@@ -161,7 +161,7 @@ class AOI
 			}
 		});
 	}
-	
+
 	getWatchedObjects(watcher)
 	{
 		const position = watcher.position;
@@ -208,7 +208,7 @@ class AOI
         const rect = this.constructor.Rect(center.x, center.y, radius);
         this.quadTreeGameObjects.retrieve(rect, (candidate) =>
 		{
-            const dis = this.Dis(center.x, center.y, candidate.x, candidate.y);
+            const dis = this.constructor.Dis(center.x, center.y, candidate.x, candidate.y);
             if (dis < radius)
             {
                 result.push(candidate.objectId);
@@ -216,7 +216,7 @@ class AOI
 		});
         return result;
 	}
-	
+
 	getWatchers(gameObject)
 	{
 		if (this.dataChangedWatcher)
@@ -225,7 +225,7 @@ class AOI
 			this.setWatchersQuadTree();
 			this.dataChangedWatcher = false;
 		}
-		
+
 		const position = gameObject.position;
 		if (position != null)
 		{
@@ -249,7 +249,7 @@ class AOI
 			return result;
 		}
 	}
-	
+
 	_refreshVisible()
 	{
 		this.watchers.forEachGameObject((watcher, type) =>
@@ -266,7 +266,7 @@ class AOI
 			this.oldVisibleObjects.set(watcher.gId, visibleObjects);
 		});
 	}
-	
+
 	update()
 	{
 		try
@@ -287,12 +287,12 @@ class AOI
 			console.error(error);
 		}
 	}
-	
+
 	start()
 	{
 		this.timeOut = setInterval(this.update.bind(this), 1000 / this.updateFPS);
 	}
-	
+
 	stop()
 	{
 		clearInterval(this.timeOut);
